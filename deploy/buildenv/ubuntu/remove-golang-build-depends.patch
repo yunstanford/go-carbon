@@ -1,0 +1,12 @@
+diff -Naur old/debian/control new/debian/control
+--- old/debian/control	2015-04-16 22:57:38.587874480 +0000
++++ new/debian/control	2015-04-16 22:57:51.998295499 +0000
+@@ -2,7 +2,7 @@
+ Section: utils
+ Priority: optional
+ Maintainer: Dave Rawks <dave@pandora.com>
+-Build-Depends: debhelper (>= 9), make, golang
++Build-Depends: debhelper (>= 9), make
+ Standards-Version: 3.9.5
+ Homepage: https://github.com/lomik/go-carbon
+ Vcs-Git: https://github.com/lomik/go-carbon.git
