@@ -1,8 +1,5 @@
 package trie
 
-
-package trie
-
 import (
 	"testing"
 )

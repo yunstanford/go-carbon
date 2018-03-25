@@ -97,3 +97,4 @@ func NewTrie() *Trie {
 		root: newNode(),
 		size: 0,
 	}
+}
