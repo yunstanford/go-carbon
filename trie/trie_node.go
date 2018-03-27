@@ -59,6 +59,19 @@ func (n *Node) IsLeaf() bool {
     return n.isLeaf
 }
 
+// RemoveOuterBraces - remove outer braces
+func RemoveOuterBraces(string s) string {
+    if s[0] == "{" && s[-1] == "}" {
+        return s[1:-1]
+    }
+    return s
+}
+
+// ExpandBraces - expand braces
+func ExpandBraces(string s) []string {
+
+}
+
 // GetAllNode - get all child nodes based on wild card query.
 func (n *Node) GetAllNode(pattern string) []*Node {
     // TODO: Add expand braces logic
