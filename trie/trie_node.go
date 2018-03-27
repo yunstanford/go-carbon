@@ -4,7 +4,12 @@ import (
     "path/filepath"
     "strings"
     "bytes"
+    "regexp"
 )
+
+
+var EXPAND_BRACES_RE = regexp.MustCompile(`.*(\{.*?[^\\]?\})`)
+
 
 // Node trie tree node container carries name and children.
 type Node struct {
@@ -78,7 +83,7 @@ func (n *Node) GetAllNode(pattern string) []*Node {
     var matches []*Node
 
     for childName, childNode := range n.children {
-        matched, err := Match(pattern, childName)
+        matched, err := filepath.Match(pattern, childName)
         if err != nil {
             // logging
             continue
