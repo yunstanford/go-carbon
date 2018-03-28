@@ -43,7 +43,7 @@ func (n *Node) Get(childName string) {
 // Insert - insert a child node.
 func (n *Node) Insert(childNode *Node) {
     if child, ok := n.children[childNode.name]; ok {
-        if child.isLeaf 
+        child.isLeaf = child.isLeaf || childNode.isLeaf
     } else {
         n.children[childNode.name] = childNode
     }
@@ -73,24 +73,52 @@ func RemoveOuterBraces(string s) string {
 }
 
 // ExpandBraces - expand braces
-func ExpandBraces(string s) []string {
-
+func ExpandBraces(s string, sep string) []string {
+    var res []string
+    m := FindStringSubmatchIndex(s)
+    if len(m) == 0 { // can't find match
+        append(res, strings.Replace(s, "\\}", "}", -1))
+    } else {
+        openBrace, closeBrace := m[2], m[3]
+        sub := s[openBrace:closeBrace]
+        if strings.Contains(sub, sep) {
+            for pat := range strings.Split(strings.Trim(sub, "{}")) {
+                var buffer bytes.Buffer
+                buffer.WriteString(s[:openBrace])
+                buffer.WriteRune(pat)
+                buffer.WriteString(s[closeBrace:])
+                sub_res := ExpandBraces(buffer.String())
+                append(res, sub_res...)
+            }
+        } else {
+            var buffer bytes.Buffer
+            buffer.WriteString(s[:openBrace])
+            buffer.WriteRune(RemoveOuterBraces(sub))
+            buffer.WriteString(s[closeBrace:])
+            sub_res := ExpandBraces(buffer.String())
+            append(res, sub_res...)
+        }
+    }
+    return res
 }
 
 // GetAllNode - get all child nodes based on wild card query.
 func (n *Node) GetAllNode(pattern string) []*Node {
     // TODO: Add expand braces logic
     var matches []*Node
+    patterns := ExpandBraces(pattern)
 
     for childName, childNode := range n.children {
-        matched, err := filepath.Match(pattern, childName)
-        if err != nil {
-            // logging
-            continue
-        }
+        for p := range patterns {
+            matched, err := filepath.Match(p, childName)
+            if err != nil {
+                // logging
+                continue
+            }
 
-        if matched {
-            append(matches, n.children[childName])
+            if matched {
+                append(matches, n.children[childName])
+            }
         }
     }
     return matches
