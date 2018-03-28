@@ -106,7 +106,7 @@ func ExpandBraces(s string, sep string) []string {
 func (n *Node) GetAllNode(pattern string) []*Node {
     // TODO: Add expand braces logic
     var matches []*Node
-    patterns := ExpandBraces(pattern, string(n.sep))
+    patterns := ExpandBraces(pattern, ",")
 
     for childName, childNode := range n.children {
         for _, p := range patterns {
