@@ -32,7 +32,7 @@ func NewNode(isLeaf bool, name string, sep rune) *Node {
 
 
 // Get - get a child node.
-func (n *Node) Get(childName string) {
+func (n *Node) Get(childName string) *Node {
     if child, ok := n.children[childName]; ok {
         return child
     } else {
@@ -65,9 +65,9 @@ func (n *Node) IsLeaf() bool {
 }
 
 // RemoveOuterBraces - remove outer braces
-func RemoveOuterBraces(string s) string {
-    if s[0] == "{" && s[-1] == "}" {
-        return s[1:-1]
+func RemoveOuterBraces(s string) string {
+    if s[0] == '{' && s[len(s) - 1] == '}' {
+        return s[1:len(s) - 1]
     }
     return s
 }
@@ -75,28 +75,28 @@ func RemoveOuterBraces(string s) string {
 // ExpandBraces - expand braces
 func ExpandBraces(s string, sep string) []string {
     var res []string
-    m := FindStringSubmatchIndex(s)
+    m := EXPAND_BRACES_RE.FindStringSubmatchIndex(s)
     if len(m) == 0 { // can't find match
-        append(res, strings.Replace(s, "\\}", "}", -1))
+        res = append(res, strings.Replace(s, "\\}", "}", -1))
     } else {
         openBrace, closeBrace := m[2], m[3]
         sub := s[openBrace:closeBrace]
         if strings.Contains(sub, sep) {
-            for pat := range strings.Split(strings.Trim(sub, "{}")) {
+            for _, pat := range strings.Split(strings.Trim(sub, "{}"), sep) {
                 var buffer bytes.Buffer
                 buffer.WriteString(s[:openBrace])
-                buffer.WriteRune(pat)
+                buffer.WriteString(pat)
                 buffer.WriteString(s[closeBrace:])
-                sub_res := ExpandBraces(buffer.String())
-                append(res, sub_res...)
+                sub_res := ExpandBraces(buffer.String(), sep)
+                res = append(res, sub_res...)
             }
         } else {
             var buffer bytes.Buffer
             buffer.WriteString(s[:openBrace])
-            buffer.WriteRune(RemoveOuterBraces(sub))
+            buffer.WriteString(RemoveOuterBraces(sub))
             buffer.WriteString(s[closeBrace:])
-            sub_res := ExpandBraces(buffer.String())
-            append(res, sub_res...)
+            sub_res := ExpandBraces(buffer.String(), sep)
+            res = append(res, sub_res...)
         }
     }
     return res
@@ -106,10 +106,10 @@ func ExpandBraces(s string, sep string) []string {
 func (n *Node) GetAllNode(pattern string) []*Node {
     // TODO: Add expand braces logic
     var matches []*Node
-    patterns := ExpandBraces(pattern)
+    patterns := ExpandBraces(pattern, string(n.sep))
 
     for childName, childNode := range n.children {
-        for p := range patterns {
+        for _, p := range patterns {
             matched, err := filepath.Match(p, childName)
             if err != nil {
                 // logging
@@ -117,7 +117,7 @@ func (n *Node) GetAllNode(pattern string) []*Node {
             }
 
             if matched {
-                append(matches, n.children[childName])
+                matches = append(matches, childNode)
             }
         }
     }
@@ -130,23 +130,23 @@ func (n *Node) ExpandQuery(query string) []string{
     sepIndex := strings.IndexRune(query, n.sep)
 
     if sepIndex < 0 {
-        for node := range n.GetAllNode(query) {
+        for _, node := range n.GetAllNode(query) {
             if node.isLeaf {
-                append(queries, node.name)
+                queries = append(queries, node.name)
             }
         }
     } else {
         curPart := query[:sepIndex]
         curMatches := n.GetAllNode(curPart)
-        subQuery := query[sepIndex + 1]
-        for m := range curMatches {
+        subQuery := query[sepIndex + 1:]
+        for _, m := range curMatches {
             subQueries := m.ExpandQuery(subQuery)
-            for sq := range subQueries {
+            for _, sq := range subQueries {
                 var buffer bytes.Buffer
                 buffer.WriteString(m.name)
                 buffer.WriteRune(n.sep)
                 buffer.WriteString(sq)
-                append(queries, buffer.String())
+                queries = append(queries, buffer.String())
             }   
         }
     }
