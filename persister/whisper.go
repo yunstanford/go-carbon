@@ -260,6 +260,9 @@ LOOP:
 			doneCb()
 		}
 		if confirm != nil {
+			// if it's not confirmed, let's put it in unconfirmed array, and update unconfirmed points in next round.
+			// It'd be better to monitor len of unconfirmed array.
+			// In most operations, this should be confirmed.
 			confirm(points)
 		}
 	}

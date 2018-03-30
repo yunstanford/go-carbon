@@ -17,6 +17,7 @@ type queue []queueItem
 
 type byOrderKey queue
 
+// define how we sort the queue
 func (v byOrderKey) Len() int           { return len(v) }
 func (v byOrderKey) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
 func (v byOrderKey) Less(i, j int) bool { return v[i].orderKey < v[j].orderKey }
@@ -48,16 +49,17 @@ func (c *Cache) makeQueue() chan *points.Points {
 	}
 
 	switch writeStrategy {
-	case MaximumLength:
+	case MaximumLength: // sort by maximum metric queue length
 		orderKey = func(p *points.Points) int64 {
 			return int64(len(p.Data))
 		}
-	case TimestampOrder:
+	case TimestampOrder: // sort by oldest timestamp of each metric queue
 		orderKey = func(p *points.Points) int64 {
 			return p.Data[0].Timestamp
 		}
 	}
 
+	// preallocate memoray because of efficiency
 	size := c.Len() * 2
 	q := make(queue, size)
 	index := int32(0)
@@ -67,7 +69,7 @@ func (c *Cache) makeQueue() chan *points.Points {
 		shard.Lock()
 
 		for _, p := range shard.items {
-			if index < size {
+			if index < size { // use preallocate memory first
 				q[index].points = p
 				q[index].orderKey = orderKey(p)
 			} else {
@@ -93,6 +95,7 @@ func (c *Cache) makeQueue() chan *points.Points {
 		return nil
 	}
 
+	// allocate a buffered chan
 	ch := make(chan *points.Points, l)
 	for _, i := range q {
 		ch <- i.points
