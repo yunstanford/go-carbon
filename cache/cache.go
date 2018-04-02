@@ -285,6 +285,7 @@ func (c *Cache) Pop(key string) (p *points.Points, exists bool) {
 	return p, exists
 }
 
+// Removes an element from the map and put it in notConfirmedUsed slice, then returns it.
 func (c *Cache) PopNotConfirmed(key string) (p *points.Points, exists bool) {
 	// Try to get shard.
 	shard := c.GetShard(key)
