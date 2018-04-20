@@ -14,6 +14,7 @@ import (
 type Point struct {
 	Value     float64
 	Timestamp int64
+	Flushed   bool
 }
 
 // Points from carbon clients
@@ -27,14 +28,15 @@ func New() *Points {
 	return &Points{}
 }
 
-// OnePoint create Points instance with single point
-func OnePoint(metric string, value float64, timestamp int64) *Points {
+// OnePoint create Points instance with single point, flushed is optional, default to false.
+func OnePoint(metric string, value float64, timestamp int64, flushed bool) *Points {
 	return &Points{
 		Metric: metric,
 		Data: []Point{
 			Point{
 				Value:     value,
 				Timestamp: timestamp,
+				Flushed:   flushed,
 			},
 		},
 	}
@@ -42,7 +44,7 @@ func OnePoint(metric string, value float64, timestamp int64) *Points {
 
 // NowPoint create OnePoint with now timestamp
 func NowPoint(metric string, value float64) *Points {
-	return OnePoint(metric, value, time.Now().Unix())
+	return OnePoint(metric, value, time.Now().Unix(), true)
 }
 
 // Copy returns copy of object
@@ -56,7 +58,7 @@ func (p *Points) Copy() *Points {
 func (p *Points) WriteTo(w io.Writer) (n int64, err error) {
 	var c int
 	for _, d := range p.Data { // every metric point
-		c, err = w.Write([]byte(fmt.Sprintf("%s %v %v\n", p.Metric, d.Value, d.Timestamp)))
+		c, err = w.Write([]byte(fmt.Sprintf("%s %v %v %t\n", p.Metric, d.Value, d.Timestamp, d.Flushed)))
 		n += int64(c)
 		if err != nil {
 			return
@@ -71,6 +73,15 @@ func encodeVarint(value int64) []byte {
 	return buf[:l]
 }
 
+func boolToInt(value bool) int64 {
+	if value {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+// @TODO: add Flushed
 func (p *Points) WriteBinaryTo(w io.Writer) (n int, err error) {
 	var c int
 
@@ -83,16 +94,19 @@ func (p *Points) WriteBinaryTo(w io.Writer) (n int, err error) {
 		return true
 	}
 
+	// META: store the length of the metric
 	if !writeVarint(int64(len(p.Metric))) {
 		return
 	}
 
+	// META: store metric name
 	c, err = io.WriteString(w, p.Metric)
 	n += c
 	if err != nil {
 		return
 	}
 
+	// META: store the number of datapoints
 	if !writeVarint(int64(len(p.Data))) {
 		return
 	}
@@ -104,6 +118,9 @@ func (p *Points) WriteBinaryTo(w io.Writer) (n int, err error) {
 		if !writeVarint(p.Data[0].Timestamp) {
 			return
 		}
+		if !writeVarint(boolToInt(p.Data[0].Flushed)) {
+			return
+		}
 	}
 
 	for i := 1; i < len(p.Data); i++ {
@@ -111,6 +128,9 @@ func (p *Points) WriteBinaryTo(w io.Writer) (n int, err error) {
 			return
 		}
 		if !writeVarint(p.Data[i].Timestamp - p.Data[i-1].Timestamp) {
+			return
+		}
+		if !writeVarint(boolToInt(p.Data[i].Flushed)) {
 			return
 		}
 	}
@@ -123,7 +143,7 @@ func (p *Points) WriteBinaryTo(w io.Writer) (n int, err error) {
 func ParseText(line string) (*Points, error) {
 
 	row := strings.Split(strings.Trim(line, "\n \t\r"), " ")
-	if len(row) != 3 {
+	if len(row) != 4 {
 		return nil, fmt.Errorf("bad message: %#v", line)
 	}
 
@@ -144,6 +164,11 @@ func ParseText(line string) (*Points, error) {
 		return nil, fmt.Errorf("bad message: %#v", line)
 	}
 
+	flushed, err := strconv.ParseBool(row[3])
+	if err != nil {
+		return nil, fmt.Errorf("bad message: %#v", line)
+	}
+
 	// 315522000 == "1980-01-01 00:00:00"
 	// if tsf < 315532800 {
 	// 	return nil, fmt.Errorf("bad message: %#v", line)
@@ -155,7 +180,7 @@ func ParseText(line string) (*Points, error) {
 	// 	return nil, fmt.Errorf("bad message: %#v", line)
 	// }
 
-	return OnePoint(row[0], value, int64(tsf)), nil
+	return OnePoint(row[0], value, int64(tsf), flushed), nil
 }
 
 // Append point
@@ -165,10 +190,12 @@ func (p *Points) Append(onePoint Point) *Points {
 }
 
 // Add value/timestamp pair to points
-func (p *Points) Add(value float64, timestamp int64) *Points {
+func (p *Points) Add(value float64, timestamp int64, flushed bool) *Points {
 	p.Data = append(p.Data, Point{
 		Value:     value,
 		Timestamp: timestamp,
+		Flushed:   flushed,
+
 	})
 	return p
 }
@@ -195,6 +222,9 @@ func (p *Points) Eq(other *Points) bool {
 			return false
 		}
 		if p.Data[i].Timestamp != other.Data[i].Timestamp {
+			return false
+		}
+		if p.Data[i].Flushed != other.Data[i].Flushed {
 			return false
 		}
 	}

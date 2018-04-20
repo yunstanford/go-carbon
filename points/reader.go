@@ -41,6 +41,14 @@ func ReadPlain(r io.Reader, callback func(*Points)) error {
 	return nil
 }
 
+func intToBool(value int64) bool {
+	if value == 0 {
+		return false
+	} else {
+		return true
+	}
+}
+
 func ReadBinary(r io.Reader, callback func(*Points)) error {
 	reader := bufio.NewReaderSize(r, MB)
 	var p *Points
@@ -75,7 +83,8 @@ func ReadBinary(r io.Reader, callback func(*Points)) error {
 
 		cnt, err := binary.ReadVarint(reader)
 
-		var v, t, v0, t0 int64
+		var v, t, v0, t0, b0 int64
+		var b bool
 
 		for i := int64(0); i < cnt; i++ {
 			v0, err = binary.ReadVarint(reader)
@@ -90,10 +99,16 @@ func ReadBinary(r io.Reader, callback func(*Points)) error {
 			}
 			t += t0
 
+			b0, err = binary.ReadVarint(reader)
+			if err != nil {
+				return err
+			}
+			b = intToBool(b0)
+
 			if i == int64(0) {
-				p = OnePoint(string(buf[:l]), math.Float64frombits(uint64(v)), t)
+				p = OnePoint(string(buf[:l]), math.Float64frombits(uint64(v)), t, b)
 			} else {
-				p.Add(math.Float64frombits(uint64(v)), t)
+				p.Add(math.Float64frombits(uint64(v)), t, b)
 			}
 		}
 	}

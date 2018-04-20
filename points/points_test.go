@@ -12,11 +12,11 @@ func TestCopyAndEq(t *testing.T) {
 
 	timestamp := time.Now().Unix()
 
-	points := OnePoint("metric.name", 42.15, timestamp)
+	points := OnePoint("metric.name", 42.15, timestamp, false)
 
 	assert.True(
 		points.Eq(
-			OnePoint("metric.name", 42.15, timestamp),
+			OnePoint("metric.name", 42.15, timestamp, false),
 		),
 	)
 
@@ -28,9 +28,9 @@ func TestCopyAndEq(t *testing.T) {
 
 	other := []*Points{
 		nil,
-		OnePoint("other.metric", 42.15, timestamp),
-		OnePoint("metric.name", 42.16, timestamp),
-		OnePoint("metric.name", 42.15, timestamp+1),
+		OnePoint("other.metric", 42.15, timestamp, false),
+		OnePoint("metric.name", 42.16, timestamp, false),
+		OnePoint("metric.name", 42.15, timestamp+1, false),
 		New(),
 		&Points{
 			Metric: "metric.name",
@@ -38,6 +38,7 @@ func TestCopyAndEq(t *testing.T) {
 		points.Copy().Append(Point{
 			Value:     42.15,
 			Timestamp: timestamp,
+			Flushed:   false,
 		}),
 	}
 

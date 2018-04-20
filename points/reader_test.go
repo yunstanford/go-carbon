@@ -11,10 +11,10 @@ import (
 func TestWriteRead(t *testing.T) {
 	assert := assert.New(t)
 
-	p1 := OnePoint("hello.world", 42.0, 1491504040)
-	p2 := OnePoint("hello.world", 45.0, 1491504100)
-	p12 := OnePoint("hello.world", 42.0, 1491504040).Add(45.0, 1491504100)
-	p123 := OnePoint("hello.world", 42.0, 1491504040).Add(42.0, 1491504100).Add(45.0, 1491504100).Add(37.0, 1491501100)
+	p1 := OnePoint("hello.world", 42.0, 1491504040, false)
+	p2 := OnePoint("hello.world", 45.0, 1491504100, false)
+	p12 := OnePoint("hello.world", 42.0, 1491504040, false).Add(45.0, 1491504100, false)
+	p123 := OnePoint("hello.world", 42.0, 1491504040, false).Add(42.0, 1491504100, false).Add(45.0, 1491504100, false).Add(37.0, 1491501100, false)
 
 	sp1 := []*Points{p1}
 	sp12 := []*Points{p12}
